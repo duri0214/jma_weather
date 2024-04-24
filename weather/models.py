@@ -36,4 +36,5 @@ class JmaAreas4(models.Model):
 class JmaAmedas(models.Model):
     """気象観測所。生データでは amedas という名前で取り扱われている"""
 
+    id = models.CharField(primary_key=True, max_length=5)
     jma_area3 = models.ForeignKey(JmaAreas3, on_delete=models.CASCADE)
