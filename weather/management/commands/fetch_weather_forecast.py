@@ -14,33 +14,33 @@ PROBABILITY_LAND = 0
 
 class RegionWeather:
     def __init__(self, region_code: str, region_name: str, weather_code: str):
-        self.code = region_code
-        self.name = region_name
+        self.region_code = region_code
+        self.region_name = region_name
         self.weather_code = weather_code
 
     def __str__(self):
-        return f"Region {self.name}({self.code}), Weather: {self.weather_code}"
+        return f"Region {self.region_name}({self.region_code}), Weather: {self.weather_code}"
 
 
 class AmedasTemperature:
     def __init__(
         self, amedas_code: str, amedas_name: str, min_temps: int, max_temps: int
     ):
-        self.code = amedas_code
-        self.name = amedas_name
+        self.amedas_code = amedas_code
+        self.amedas_name = amedas_name
         self.min_temps = min_temps
         self.max_temps = max_temps
 
     def __str__(self):
-        return f"  {self.name}({self.code} の朝の最低気温: {self.min_temps}, 日中の最高気温: {self.max_temps})"
+        return f"  {self.amedas_name}({self.amedas_code} の朝の最低気温: {self.min_temps}, 日中の最高気温: {self.max_temps})"
 
 
 class RegionTemperature:
     def __init__(
         self, region_code: str, region_name: str, data: dict, target_date: date
     ):
-        self.code = region_code
-        self.name = region_name
+        self.region_code = region_code
+        self.region_name = region_name
         self.data = data
         amedas_ids = [
             amedas.id for amedas in JmaAmedas.objects.filter(jma_area3_id=region_code)
@@ -81,7 +81,7 @@ class RegionTemperature:
                 int(amedas["temps"][min_temps_idx]),
                 int(amedas["temps"][max_temps_idx]),
             )
-            if amedas_temperature.code not in target_amedas_ids:
+            if amedas_temperature.amedas_code not in target_amedas_ids:
                 continue
             min_temps_list.append(amedas_temperature.min_temps)
             max_temps_list.append(amedas_temperature.max_temps)
@@ -94,9 +94,9 @@ class RegionTemperature:
 
 class RegionWindSpeed:
     def __init__(self, region_code: str, data: dict, target_indexes: list[int]):
-        self.code = region_code
+        self.region_code = region_code
         self.data = data
-        self.wind_speed = self.calc_wind_speed(data, target_indexes)
+        self.avg_wind_speed = self.calc_wind_speed(data, target_indexes)
 
     @staticmethod
     def calc_wind_speed(wind_data, target_indexes):
@@ -109,7 +109,7 @@ class RegionWindSpeed:
         return round(sum(wind_values) / len(wind_values), 1)
 
     def __str__(self):
-        return f"{self.code} の最大風速（日中平均）は {self.wind_speed}"
+        return f"{self.region_code} の最大風速（日中平均）は {self.avg_wind_speed}"
 
 
 class RegionForecastResults:
@@ -119,20 +119,20 @@ class RegionForecastResults:
         region_temperature: RegionTemperature,
         region_wind_speed: RegionWindSpeed,
     ):
-        self.weather = region_weather
-        self.temperature = region_temperature
-        self.wind_speed = region_wind_speed.wind_speed
+        self.region_weather = region_weather
+        self.region_temperature = region_temperature
+        self.region_wind_speed = region_wind_speed
 
     def __str__(self):
-        region_code = self.weather.code
-        region_name = self.weather.name
+        region_code = self.region_weather.region_code
+        region_name = self.region_weather.region_name
         forecast = {
-            "weather_code": self.weather.weather_code,
+            "weather_code": self.region_weather.weather_code,
             "temperature": (
-                self.temperature.avg_min_temps,
-                self.temperature.avg_max_temps,
+                self.region_temperature.avg_min_temps,
+                self.region_temperature.avg_max_temps,
             ),
-            "wind_speed": self.wind_speed,
+            "wind_speed": self.region_wind_speed.avg_wind_speed,
         }
 
         return f"{region_code}({region_name}): {forecast}"
@@ -146,7 +146,7 @@ class Command(BaseCommand):
         tomorrow = today + timedelta(days=1)
 
         # TODO: facilityテーブルから areas2_ids を取得
-        jma_areas2_ids = ["280000", "130000"]
+        jma_areas2_ids = ["280000", "050000", "130000"]
 
         if not jma_areas2_ids:
             raise Exception("facility is empty")
