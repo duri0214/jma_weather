@@ -38,3 +38,20 @@ class JmaAmedas(models.Model):
 
     id = models.CharField(primary_key=True, max_length=5)
     jma_area3 = models.ForeignKey(JmaAreas3, on_delete=models.CASCADE)
+
+
+class JmaWeather(models.Model):
+    jma_areas3 = models.OneToOneField(
+        JmaAreas3, primary_key=True, on_delete=models.CASCADE
+    )
+    weather_code = models.CharField(max_length=3)
+    temperature_min = models.FloatField()
+    temperature_max = models.FloatField()
+    wind_speed = models.FloatField()
+
+
+class JmaWarning(models.Model):
+    jma_areas3 = models.OneToOneField(
+        JmaAreas3, primary_key=True, on_delete=models.CASCADE
+    )
+    warnings = models.CharField(max_length=100)

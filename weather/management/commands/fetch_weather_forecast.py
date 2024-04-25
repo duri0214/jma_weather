@@ -3,7 +3,7 @@ from datetime import date, timedelta, datetime
 import requests
 from django.core.management.base import BaseCommand
 
-from weather.models import JmaAmedas
+from weather.models import JmaAmedas, JmaWeather
 
 FORECASTS_3DAYS = 0
 FORECASTS_OVERVIEW = 0
@@ -150,6 +150,8 @@ class Command(BaseCommand):
 
         if not jma_areas2_ids:
             raise Exception("facility is empty")
+
+        JmaWeather.objects.all().delete()
         for prefecture_id in jma_areas2_ids:
             forecasts_by_region = {}
 
@@ -206,6 +208,8 @@ class Command(BaseCommand):
                 forecasts_by_region.setdefault(region_code, {})[
                     "wind_speed"
                 ] = region_wind_speed
+
+            region_forecast_results_list: list[RegionForecastResults] = []
             for region_code, forecast in forecasts_by_region.items():
                 region_forecast_results = RegionForecastResults(
                     forecast["weather"],
@@ -213,18 +217,20 @@ class Command(BaseCommand):
                     forecast["wind_speed"],
                 )
                 print(region_forecast_results)
+                region_forecast_results_list.append(region_forecast_results)
 
-            # TODO: dbに保存
-            # JmaAmedas.objects.all().delete()
-            # JmaAmedas.objects.bulk_create(
-            #     [
-            #         JmaAmedas(
-            #             id=item["id"],
-            #             jma_area3_id=item["jmaAreas3Id"],
-            #         )
-            #         for item in dict_amedas
-            #     ]
-            # )
+            JmaWeather.objects.bulk_create(
+                [
+                    JmaWeather(
+                        jma_areas3_id=item.region_weather.region_code,
+                        weather_code=item.region_weather.weather_code,
+                        temperature_min=item.region_temperature.avg_min_temps,
+                        temperature_max=item.region_temperature.avg_max_temps,
+                        wind_speed=item.region_wind_speed.avg_wind_speed,
+                    )
+                    for item in region_forecast_results_list
+                ]
+            )
 
         self.stdout.write(
             self.style.SUCCESS("weather forecast data retrieve has been completed.")

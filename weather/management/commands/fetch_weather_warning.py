@@ -1,6 +1,8 @@
 import requests
 from django.core.management.base import BaseCommand
 
+from weather.models import JmaWarning
+
 WARNING_REGION_BASED = 0
 
 M_TARGET_WARNINGS = {
@@ -18,7 +20,7 @@ M_TARGET_WARNINGS = {
 
 class RegionWarning:
     def __init__(self, region_code: str, data: dict):
-        self.code = region_code
+        self.region_code = region_code
         self.data = data
         warning_target_codes = M_TARGET_WARNINGS.keys()
         self.warnings = [
@@ -38,17 +40,17 @@ class RegionWarning:
         return list(set(warnings))
 
     def __str__(self):
-        return f"{self.code} の保持する警報は {self.warnings}"
+        return f"{self.region_code} の保持する警報は {self.warnings}"
 
 
 class RegionWarningResults:
     def __init__(self, region_warnings: RegionWarning):
-        self.warnings = region_warnings
+        self.region_warnings = region_warnings
 
     def __str__(self):
-        region_code = self.warnings.code
-        forecast = {"warnings": self.warnings.warnings}
-        return f"{region_code}: {forecast}"
+        region_code = self.region_warnings.region_code
+        warnings = {"warnings": self.region_warnings.warnings}
+        return f"{region_code}: {warnings}"
 
 
 class Command(BaseCommand):
@@ -60,6 +62,8 @@ class Command(BaseCommand):
 
         if not jma_areas2_ids:
             raise Exception("facility is empty")
+
+        JmaWarning.objects.all().delete()
         for prefecture_id in jma_areas2_ids:
             warnings_by_region = {}
 
@@ -73,21 +77,22 @@ class Command(BaseCommand):
                     "warnings"
                 ] = region_warning
 
+            region_warning_results_list: list[RegionWarningResults] = []
             for region_code, forecast in warnings_by_region.items():
                 region_warning_results = RegionWarningResults(forecast["warnings"])
                 print(region_warning_results)
+                region_warning_results_list.append(region_warning_results)
 
-            # TODO: dbに保存
-            # JmaAmedas.objects.all().delete()
-            # JmaAmedas.objects.bulk_create(
-            #     [
-            #         JmaAmedas(
-            #             id=item["id"],
-            #             jma_area3_id=item["jmaAreas3Id"],
-            #         )
-            #         for item in dict_amedas
-            #     ]
-            # )
+            JmaWarning.objects.bulk_create(
+                [
+                    JmaWarning(
+                        jma_areas3_id=item.region_warnings.region_code,
+                        warnings=",".join(item.region_warnings.warnings),
+                    )
+                    for item in region_warning_results_list
+                    if item.region_warnings.warnings
+                ],
+            )
 
         self.stdout.write(
             self.style.SUCCESS("weather warning data retrieve has been completed.")
