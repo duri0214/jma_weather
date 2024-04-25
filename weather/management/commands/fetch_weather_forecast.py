@@ -66,8 +66,8 @@ class RegionTemperature:
             if time_define == target_date
         ]
 
+    @staticmethod
     def get_temps_list(
-        self,
         amedas_data,
         target_amedas_ids: list[str],
         min_temps_idx: int,
